@@ -11,7 +11,7 @@ load_dotenv()
 
 # === Konfiguration ===
 WAKEWORD_PATH = os.environ.get("PORC_WAKEWORD_PATH")
-BACKEND_URL = os.getenv("BACKEND_URL", os.environ.get("GROCYAI_API_URL") + "/chat")
+BACKEND_URL = os.getenv("BACKEND_URL", os.environ.get("GROCYAI_API_URL")+":"+os.environ.get("GROCYAI_API_PORT") + "/upload_audio")
 AUDIO_FILENAME = "wake_audio.wav"
 DURATION = 5  # Sekunden Aufnahme nach Wakeword
 
