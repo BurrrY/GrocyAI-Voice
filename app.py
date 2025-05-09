@@ -4,6 +4,8 @@ import wave
 import requests
 import os
 import array
+import logging
+import time
 
 
 from dotenv import load_dotenv
@@ -15,32 +17,11 @@ BACKEND_URL = os.getenv("BACKEND_URL", os.environ.get("GROCYAI_API_URL")+":"+os.
 AUDIO_FILENAME = "wake_audio.wav"
 DURATION = 5  # Sekunden Aufnahme nach Wakeword
 
-# === Wakeword initialisieren ===
-porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH], model_path=os.environ.get("PORC_MODEL_PATH"))
-
-
-pa = pyaudio.PyAudio()
-usb_index = None
-for i in range(pa.get_device_count()):
-    info = pa.get_device_info_by_index(i)
-    if "USB" in info["name"] and info["maxInputChannels"] > 0:
-        usb_index = i
-        break
-
-print("Using device #" + str(usb_index))
-
-info = pa.get_device_info_by_index(usb_index)
-print(f"Supported sample rate(s) for {info['name']}:")
-print(info)
-
-
-stream = pa.open(
-    rate=porcupine.sample_rate,
-    channels=1,
-    format=pyaudio.paInt16,
-    input=True,
-    #input_device_index=usb_index,
-    frames_per_buffer=porcupine.frame_length
+# === Setup Logging ===
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    handlers=[logging.StreamHandler()]
 )
 
 def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
@@ -62,19 +43,29 @@ def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
         print(f"❌ Fehler beim Senden an HA Webhook: {e}")
 
 
-def record_audio(filename: str, duration: int):
+def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
+    logging.info(f"🎙 Starte Aufnahme für {duration} Sekunden...")
+    stream = pa.open(
+        rate=sample_rate,
+        channels=1,
+        format=pyaudio.paInt16,
+        input=True,
+        frames_per_buffer=frame_length
+    )
     frames = []
-    print(f"🎙 Aufnahme gestartet ({duration}s)...")
-    for _ in range(0, int(porcupine.sample_rate / porcupine.frame_length * duration)):
-        data = stream.read(porcupine.frame_length, exception_on_overflow=False)
+    for _ in range(0, int(sample_rate / frame_length * duration)):
+        data = stream.read(frame_length, exception_on_overflow=False)
         frames.append(data)
+
+    stream.stop_stream()
+    stream.close()
 
     with wave.open(filename, 'wb') as wf:
         wf.setnchannels(1)
         wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
-        wf.setframerate(porcupine.sample_rate)
+        wf.setframerate(sample_rate)
         wf.writeframes(b''.join(frames))
-    print("✅ Aufnahme beendet")
+    logging.info("✅ Aufnahme abgeschlossen")
 
 def send_to_backend(filename: str):
     with open(filename, 'rb') as f:
@@ -82,31 +73,53 @@ def send_to_backend(filename: str):
         try:
             res = requests.post(BACKEND_URL, files=files, timeout=30)
             res.raise_for_status()
-            print("🤖 Antwort vom Backend:", res.json().get("reply"))
+            reply = res.json().get("reply")
+            logging.info(f"🤖 Antwort: {reply}")
 
             send_tts_to_homeassistant(
-                text=res.json().get("reply"),
+                text=reply,
                 player=os.environ.get("HA_WEBHOOK_PLAYER"),
                 speaker="Mila"
             )
         except Exception as e:
-            print("❌ Fehler beim Senden an Backend:", e)
+            logging.error(f"❌ Fehler beim Senden an Backend: {e}")
 
-try:
-    print("🔊 Bereit – warte auf Wakeword ...")
+def main():
+    logging.info("🔊 Initialisiere Wakeword-Engine...")
+    porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH], model_path=os.environ.get("PORC_MODEL_PATH"))
+    pa = pyaudio.PyAudio()
+
     while True:
-        pcm = stream.read(porcupine.frame_length, exception_on_overflow=False)
-        pcm = array.array("h", pcm)  # int16 PCM
-        if porcupine.process(pcm) >= 0:
-            print("🎉 Wakeword erkannt!")
-            record_audio(AUDIO_FILENAME, DURATION)
-            send_to_backend(AUDIO_FILENAME)
-            print("⏳ Warte erneut auf Wakeword...")
+        try:
+            logging.info("🟢 Warte auf Wakeword...")
+            stream = pa.open(
+                rate=porcupine.sample_rate,
+                channels=1,
+                format=pyaudio.paInt16,
+                input=True,
+                frames_per_buffer=porcupine.frame_length
+            )
 
-except KeyboardInterrupt:
-    print("🛑 Beende...")
-finally:
-    stream.stop_stream()
-    stream.close()
-    pa.terminate()
+            while True:
+                pcm = stream.read(porcupine.frame_length, exception_on_overflow=False)
+                pcm = array.array("h", pcm)
+                if porcupine.process(pcm) >= 0:
+                    logging.info("🎉 Wakeword erkannt!")
+                    stream.stop_stream()
+                    stream.close()
+                    record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
+                    send_to_backend(AUDIO_FILENAME)
+                    break
+
+        except Exception as e:
+            logging.error(f"❌ Fehler in Hauptloop: {e}")
+            time.sleep(1)  # kurz warten und dann neu versuchen
+
     porcupine.delete()
+    pa.terminate()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except KeyboardInterrupt:
+        logging.info("🛑 Beendet durch Benutzer")
