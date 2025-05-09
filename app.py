@@ -43,6 +43,25 @@ stream = pa.open(
     frames_per_buffer=porcupine.frame_length
 )
 
+def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
+    webhook_id = ""
+    url =  os.environ.get("HA_WEBHOOK")
+
+
+    payload = {
+        "text": text,
+        "player": player,
+        "speaker": speaker
+    }
+
+    try:
+        res = requests.post(url, json=payload, timeout=5)
+        res.raise_for_status()
+        print("✅ TTS erfolgreich an Home Assistant gesendet.")
+    except Exception as e:
+        print(f"❌ Fehler beim Senden an HA Webhook: {e}")
+
+
 def record_audio(filename: str, duration: int):
     frames = []
     print(f"🎙 Aufnahme gestartet ({duration}s)...")
@@ -64,13 +83,19 @@ def send_to_backend(filename: str):
             res = requests.post(BACKEND_URL, files=files, timeout=30)
             res.raise_for_status()
             print("🤖 Antwort vom Backend:", res.json().get("reply"))
+
+            send_tts_to_homeassistant(
+                text=res.json().get("reply"),
+                player=os.environ.get("HA_WEBHOOK_PLAYER"),
+                speaker="Mila"
+            )
         except Exception as e:
             print("❌ Fehler beim Senden an Backend:", e)
 
 try:
     print("🔊 Bereit – warte auf Wakeword ...")
     while True:
-        pcm = stream.read(porcupine.frame_length)
+        pcm = stream.read(porcupine.frame_length, exception_on_overflow=False)
         pcm = array.array("h", pcm)  # int16 PCM
         if porcupine.process(pcm) >= 0:
             print("🎉 Wakeword erkannt!")
