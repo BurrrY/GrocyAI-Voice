@@ -27,6 +27,7 @@ for i in range(pa.get_device_count()):
         usb_index = i
         break
 
+print("Using device #" + str(usb_index))
 
 stream = pa.open(
     rate=porcupine.sample_rate,
