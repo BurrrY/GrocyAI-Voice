@@ -8,13 +8,13 @@ import os
 import time
 
 # === Konfiguration ===
-WAKEWORD_PATH = "hey-bury.ppn"  # in das gleiche Verzeichnis legen
+WAKEWORD_PATH = os.environ.get("PORC_WAKEWORD_PATH")
 BACKEND_URL = os.getenv("BACKEND_URL", os.environ.get("GROCYAI_API_URL") + "/chat")
 AUDIO_FILENAME = "wake_audio.wav"
 DURATION = 5  # Sekunden Aufnahme nach Wakeword
 
 # === Wakeword initialisieren ===
-porcupine = pvporcupine.create(keyword_paths=[WAKEWORD_PATH])
+porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH])
 pa = pyaudio.PyAudio()
 stream = pa.open(
     rate=porcupine.sample_rate,
@@ -49,7 +49,7 @@ def send_to_backend(filename: str):
             print("❌ Fehler beim Senden an Backend:", e)
 
 try:
-    print("🔊 Bereit – warte auf Wakeword ("Hey Bury")...")
+    print("🔊 Bereit – warte auf Wakeword ...")
     while True:
         pcm = stream.read(porcupine.frame_length)
         if porcupine.process(pcm) >= 0:
