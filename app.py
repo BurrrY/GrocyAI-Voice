@@ -39,7 +39,7 @@ stream = pa.open(
     channels=1,
     format=pyaudio.paInt16,
     input=True,
-    input_device_index=usb_index,
+    #input_device_index=usb_index,
     frames_per_buffer=porcupine.frame_length
 )
 
