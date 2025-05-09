@@ -17,12 +17,23 @@ DURATION = 5  # Sekunden Aufnahme nach Wakeword
 
 # === Wakeword initialisieren ===
 porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH], model_path=os.environ.get("PORC_MODEL_PATH"))
+
+
 pa = pyaudio.PyAudio()
+usb_index = None
+for i in range(pa.get_device_count()):
+    info = pa.get_device_info_by_index(i)
+    if "USB" in info["name"] and info["maxInputChannels"] > 0:
+        usb_index = i
+        break
+
+
 stream = pa.open(
     rate=porcupine.sample_rate,
     channels=1,
     format=pyaudio.paInt16,
     input=True,
+    input_device_index=usb_index,
     frames_per_buffer=porcupine.frame_length
 )
 
