@@ -29,6 +29,11 @@ for i in range(pa.get_device_count()):
 
 print("Using device #" + str(usb_index))
 
+info = pa.get_device_info_by_index(usb_index)
+print(f"Supported sample rate(s) for {info['name']}:")
+print(info)
+
+
 stream = pa.open(
     rate=porcupine.sample_rate,
     channels=1,
