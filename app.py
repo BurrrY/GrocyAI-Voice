@@ -44,7 +44,17 @@ def led(state):
             time.sleep(0.3)
             pixels.fill((0, 0, 0))
             time.sleep(0.2)
-
+    elif state == "startup":
+        for i in range(0, 255, 5):
+            pixels.fill((i, 0, 255 - i))  # Farbverlauf lila → blau
+            time.sleep(0.01)
+        pixels.fill((0, 0, 0))
+    elif state == "shutdown":
+        for i in range(3):
+            pixels.fill((255, 255, 255))
+            time.sleep(0.1)
+            pixels.fill((0, 0, 0))
+            time.sleep(0.1)
 
 def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
     webhook_id = ""
@@ -110,6 +120,7 @@ def send_to_backend(filename: str):
 
 def main():
     logging.info("🔊 Initialisiere Wakeword-Engine...")
+    led("startup")
     porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH], model_path=os.environ.get("PORC_MODEL_PATH"))
     pa = pyaudio.PyAudio()
 
@@ -150,4 +161,4 @@ if __name__ == "__main__":
         main()
     except KeyboardInterrupt:
         logging.info("🛑 Beendet durch Benutzer")
-        pixels.fill((0, 0, 0))
+        led("shutdown")
