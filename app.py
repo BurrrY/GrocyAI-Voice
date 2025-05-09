@@ -3,6 +3,8 @@ import pyaudio
 import wave
 import requests
 import os
+import array
+
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -28,7 +30,7 @@ def record_audio(filename: str, duration: int):
     frames = []
     print(f"🎙 Aufnahme gestartet ({duration}s)...")
     for _ in range(0, int(porcupine.sample_rate / porcupine.frame_length * duration)):
-        data = stream.read(porcupine.frame_length)
+        data = stream.read(porcupine.frame_length, exception_on_overflow=False)
         frames.append(data)
 
     with wave.open(filename, 'wb') as wf:
@@ -52,7 +54,7 @@ try:
     print("🔊 Bereit – warte auf Wakeword ...")
     while True:
         pcm = stream.read(porcupine.frame_length)
-        pcm = bytearray(pcm)
+        pcm = array.array("h", pcm)  # int16 PCM
         if porcupine.process(pcm) >= 0:
             print("🎉 Wakeword erkannt!")
             record_audio(AUDIO_FILENAME, DURATION)
