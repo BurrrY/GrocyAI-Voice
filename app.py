@@ -52,6 +52,7 @@ try:
     print("🔊 Bereit – warte auf Wakeword ...")
     while True:
         pcm = stream.read(porcupine.frame_length)
+        pcm = bytearray(pcm)
         if porcupine.process(pcm) >= 0:
             print("🎉 Wakeword erkannt!")
             record_audio(AUDIO_FILENAME, DURATION)
