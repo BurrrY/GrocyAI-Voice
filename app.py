@@ -6,6 +6,8 @@ import os
 import array
 import logging
 import time
+import board
+import neopixel
 
 
 from dotenv import load_dotenv
@@ -23,6 +25,26 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(message)s",
     handlers=[logging.StreamHandler()]
 )
+
+# === WS2812 LED Setup ===
+NUM_PIXELS = 1
+PIXEL_PIN = board.D18  # GPIO18 (PWM-fähig)
+pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.2, auto_write=True)
+
+def led(state):
+    if state == "idle":
+        pixels.fill((0, 50, 0))       # grün
+    elif state == "listening":
+        pixels.fill((255, 165, 0))    # orange
+    elif state == "responding":
+        pixels.fill((0, 0, 255))      # blau
+    elif state == "error":
+        for _ in range(3):
+            pixels.fill((255, 0, 0))  # rot blinken
+            time.sleep(0.3)
+            pixels.fill((0, 0, 0))
+            time.sleep(0.2)
+
 
 def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
     webhook_id = ""
@@ -45,6 +67,7 @@ def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
 
 def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
     logging.info(f"🎙 Starte Aufnahme für {duration} Sekunden...")
+    led("listening")
     stream = pa.open(
         rate=sample_rate,
         channels=1,
@@ -68,6 +91,7 @@ def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
     logging.info("✅ Aufnahme abgeschlossen")
 
 def send_to_backend(filename: str):
+    led("responding")
     with open(filename, 'rb') as f:
         files = {'audio': (filename, f, 'audio/wav')}
         try:
@@ -92,6 +116,7 @@ def main():
     while True:
         try:
             logging.info("🟢 Warte auf Wakeword...")
+            led("idle")
             stream = pa.open(
                 rate=porcupine.sample_rate,
                 channels=1,
@@ -113,13 +138,16 @@ def main():
 
         except Exception as e:
             logging.error(f"❌ Fehler in Hauptloop: {e}")
+            led("error")
             time.sleep(1)  # kurz warten und dann neu versuchen
 
     porcupine.delete()
     pa.terminate()
+    pixels.fill((0, 0, 0))
 
 if __name__ == "__main__":
     try:
         main()
     except KeyboardInterrupt:
         logging.info("🛑 Beendet durch Benutzer")
+        pixels.fill((0, 0, 0))
