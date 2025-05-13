@@ -103,6 +103,7 @@ def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
 
 button_pressed = threading.Event()
 def button_callback(channel):
+    logging.error(f"CB: Button pressed!")
     button_pressed.set()
 
 def init_gpio(BUTTON_PIN=26):
@@ -153,23 +154,27 @@ def main():
                 frames_per_buffer=porcupine.frame_length
             )
 
-            while True:
-                pcm = stream.read(porcupine.frame_length, exception_on_overflow=False)
-                pcm = array.array("h", pcm)
-                if porcupine.process(pcm) >= 0:
-                    logging.info("🎉 Wakeword erkannt!")
-                    stream.stop_stream()
-                    stream.close()
-                    record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
-                    send_to_backend(AUDIO_FILENAME)
-                    break
+            try:
+                while True:
+                    pcm = stream.read(porcupine.frame_length, exception_on_overflow=False)
+                    pcm = array.array("h", pcm)
 
-                if button_pressed.is_set():
-                    logging.info("🔘 Knopf gedrückt!")
-                    button_pressed.clear()
-                    record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
-                    send_to_backend(AUDIO_FILENAME)
-                    break
+                    if porcupine.process(pcm) >= 0:
+                        logging.info("🎉 Wakeword erkannt!")
+                        break
+
+                    if button_pressed.is_set():
+                        logging.info("🔘 Knopf gedrückt!")
+                        button_pressed.clear()
+                        break
+
+            finally:
+                stream.stop_stream()
+                stream.close()
+
+            # Danach Aufnahme und Senden
+            record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
+            send_to_backend(AUDIO_FILENAME)
 
         except Exception as e:
             logging.error(f"❌ Fehler in Hauptloop: {e}")
