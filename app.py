@@ -35,7 +35,10 @@ button_pressed = threading.Event()
 def button_callback(channel):
     button_pressed.set()
 
-GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=300)
+try:
+    GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=300)
+except RuntimeError as e:
+    logging.error(f"⚠️ GPIO-Fehler: {e}")
 
 # === WS2812 LED Setup ===
 NUM_PIXELS = 5
