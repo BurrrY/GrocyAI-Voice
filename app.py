@@ -14,6 +14,10 @@ import RPi.GPIO as GPIO
 from dotenv import load_dotenv
 load_dotenv()
 
+PIXEL_PIN = board.D18
+BUTTON_PIN=2
+
+
 # === Konfiguration ===
 WAKEWORD_PATH = os.environ.get("PORC_WAKEWORD_PATH")
 BACKEND_URL = os.getenv("BACKEND_URL", os.environ.get("GROCYAI_API_URL")+":"+os.environ.get("GROCYAI_API_PORT") + "/upload-audio")
@@ -29,7 +33,6 @@ logging.basicConfig(
 
 # === WS2812 LED Setup ===
 NUM_PIXELS = 3
-PIXEL_PIN = board.D18  # GPIO18 (PWM-fähig)
 pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.8, auto_write=True)
 
 def led(state):
@@ -106,7 +109,7 @@ def button_callback(channel):
     logging.error(f"CB: Button pressed!")
     button_pressed.set()
 
-def init_gpio(BUTTON_PIN=26):
+def init_gpio():
     GPIO.setwarnings(False)
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
