@@ -29,7 +29,7 @@ logging.basicConfig(
 
 # === WS2812 LED Setup ===
 NUM_PIXELS = 5
-PIXEL_PIN = board.D12  # GPIO18 (PWM-fähig)
+PIXEL_PIN = board.D18  # GPIO18 (PWM-fähig)
 pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.6, auto_write=True)
 
 def led(state):
