@@ -27,20 +27,6 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
-button_pressed = threading.Event()
-
-BUTTON_PIN = 26
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-
-def button_callback(channel):
-    button_pressed.set()
-
-try:
-    GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=300)
-except RuntimeError as e:
-    logging.error(f"⚠️ GPIO-Fehler: {e}")
-
 # === WS2812 LED Setup ===
 NUM_PIXELS = 5
 PIXEL_PIN = board.D12  # GPIO18 (PWM-fähig)
@@ -115,6 +101,21 @@ def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
         wf.writeframes(b''.join(frames))
     logging.info("✅ Aufnahme abgeschlossen")
 
+button_pressed = threading.Event()
+def button_callback(channel):
+    button_pressed.set()
+
+def init_gpio(BUTTON_PIN=26):
+    GPIO.setwarnings(False)
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
+    try:
+        GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=300)
+    except RuntimeError as e:
+        logging.error(f"⚠️ GPIO-Fehler: {e}")
+
+
 def send_to_backend(filename: str):
     led("responding")
     with open(filename, 'rb') as f:
@@ -138,6 +139,7 @@ def main():
     led("startup")
     porcupine = pvporcupine.create(os.environ.get("PORC_API_KEY"), keyword_paths=[WAKEWORD_PATH], model_path=os.environ.get("PORC_MODEL_PATH"))
     pa = pyaudio.PyAudio()
+    init_gpio()
 
     while True:
         try:
