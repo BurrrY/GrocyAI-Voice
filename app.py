@@ -28,9 +28,9 @@ logging.basicConfig(
 )
 
 # === WS2812 LED Setup ===
-NUM_PIXELS = 5
+NUM_PIXELS = 3
 PIXEL_PIN = board.D18  # GPIO18 (PWM-fähig)
-pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.6, auto_write=True)
+pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.8, auto_write=True)
 
 def led(state):
     if state == "idle":
