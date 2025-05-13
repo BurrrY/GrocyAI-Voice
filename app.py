@@ -8,6 +8,7 @@ import logging
 import time
 import board
 import neopixel
+import threading
 
 
 from dotenv import load_dotenv
@@ -26,9 +27,19 @@ logging.basicConfig(
     handlers=[logging.StreamHandler()]
 )
 
+BUTTON_PIN = 26
+GPIO.setmode(GPIO.BCM)
+GPIO.setup(BUTTON_PIN, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+button_pressed = threading.Event()
+
+def button_callback(channel):
+    button_pressed.set()
+
+GPIO.add_event_detect(BUTTON_PIN, GPIO.RISING, callback=button_callback, bouncetime=300)
+
 # === WS2812 LED Setup ===
-NUM_PIXELS = 1
-PIXEL_PIN = board.D18  # GPIO18 (PWM-fähig)
+NUM_PIXELS = 5
+PIXEL_PIN = board.D12  # GPIO18 (PWM-fähig)
 pixels = neopixel.NeoPixel(PIXEL_PIN, NUM_PIXELS, brightness=0.2, auto_write=True)
 
 def led(state):
@@ -145,6 +156,11 @@ def main():
                     stream.close()
                     record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
                     send_to_backend(AUDIO_FILENAME)
+                    break
+
+                if button_pressed.is_set():
+                    logging.info("🔘 Knopf gedrückt!")
+                    button_pressed.clear()
                     break
 
         except Exception as e:
