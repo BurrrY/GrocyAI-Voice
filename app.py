@@ -9,7 +9,7 @@ import time
 import board
 import neopixel
 import threading
-
+import RPi.GPIO as GPIO
 
 from dotenv import load_dotenv
 load_dotenv()
