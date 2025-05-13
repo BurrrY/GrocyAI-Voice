@@ -167,6 +167,8 @@ def main():
                 if button_pressed.is_set():
                     logging.info("🔘 Knopf gedrückt!")
                     button_pressed.clear()
+                    record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
+                    send_to_backend(AUDIO_FILENAME)
                     break
 
         except Exception as e:
