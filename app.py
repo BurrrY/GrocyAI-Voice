@@ -15,7 +15,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 PIXEL_PIN = board.D18
-BUTTON_PIN=2
+BUTTON_PIN=4
 
 
 # === Konfiguration ===
