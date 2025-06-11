@@ -114,6 +114,7 @@ def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
         wf.setsampwidth(pa.get_sample_size(pyaudio.paInt16))
         wf.setframerate(sample_rate)
         wf.writeframes(b''.join(frames))
+    time.sleep(0.1)
     logging.info("✅ Aufnahme abgeschlossen")
 
 button_pressed = threading.Event()
