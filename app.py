@@ -218,9 +218,9 @@ def main():
 
             # Danach Aufnahme und Senden
             record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
-            reduce_noise(AUDIO_FILENAME, AUDIO_FILENAME)
-            normalize_audio(AUDIO_FILENAME)
-            send_to_backend(AUDIO_FILENAME)
+            reduce_noise(AUDIO_FILENAME, "clean_" + AUDIO_FILENAME)
+            normalize_audio("clean_" + AUDIO_FILENAME)
+            send_to_backend("clean_" + AUDIO_FILENAME)
 
         except Exception as e:
             logging.error(f"❌ Fehler in Hauptloop: {e}")
