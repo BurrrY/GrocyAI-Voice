@@ -10,7 +10,8 @@ import board
 import neopixel
 import threading
 import RPi.GPIO as GPIO
-
+from pydub import AudioSegment
+from pydub.effects import normalize
 from dotenv import load_dotenv
 load_dotenv()
 
@@ -77,6 +78,15 @@ def send_tts_to_homeassistant(text: str, player: str, speaker: str = "Mimi"):
         print("✅ TTS erfolgreich an Home Assistant gesendet.")
     except Exception as e:
         print(f"❌ Fehler beim Senden an HA Webhook: {e}")
+
+def normalize_audio(file_path: str):
+    try:
+        audio = AudioSegment.from_wav(file_path)
+        louder_audio = normalize(audio)
+        louder_audio.export(file_path, format="wav")
+        print(f"🔊 Audio normalisiert: {file_path}")
+    except Exception as e:
+        print(f"❌ Fehler bei Audio-Normalisierung: {e}")
 
 
 def record_audio(filename: str, duration: int, pa, sample_rate, frame_length):
@@ -177,6 +187,7 @@ def main():
 
             # Danach Aufnahme und Senden
             record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
+            normalize_audio(AUDIO_FILENAME)
             send_to_backend(AUDIO_FILENAME)
 
         except Exception as e:

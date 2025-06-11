@@ -3,3 +3,6 @@ pyaudio
 requests
 rpi_ws281x
 adafruit-circuitpython-neopixel
+RPi.GPIO
+pydub
+ffmpeg
