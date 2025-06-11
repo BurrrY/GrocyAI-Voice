@@ -1,3 +1,5 @@
+import subprocess
+
 import pvporcupine
 import pyaudio
 import wave
@@ -147,6 +149,34 @@ def send_to_backend(filename: str):
             )
         except Exception as e:
             logging.error(f"❌ Fehler beim Senden an Backend: {e}")
+def reduce_noise(input_path: str, output_path: str):
+    noise_sample = "noise_sample.wav"
+    noise_profile = "noise.prof"
+
+    try:
+        # 1. Extract noise sample (first 0.5s)
+        subprocess.run([
+            "sox", input_path, noise_sample, "trim", "0", "0.5"
+        ], check=True)
+
+        # 2. Generate noise profile
+        subprocess.run([
+            "sox", noise_sample, "-n", "noiseprof", noise_profile
+        ], check=True)
+
+        # 3. Apply noise reduction
+        subprocess.run([
+            "sox", input_path, output_path, "noisered", noise_profile, "0.21"
+        ], check=True)
+
+        print(f"✅ Noise reduced and saved to {output_path}")
+
+    except subprocess.CalledProcessError as e:
+        print(f"❌ SoX command failed: {e}")
+
+    # Cleanup (optional)
+    os.remove(noise_sample)
+    os.remove(noise_profile)
 
 def main():
     logging.info("🔊 Initialisiere Wakeword-Engine...")
@@ -187,6 +217,7 @@ def main():
 
             # Danach Aufnahme und Senden
             record_audio(AUDIO_FILENAME, DURATION, pa, porcupine.sample_rate, porcupine.frame_length)
+            reduce_noise(AUDIO_FILENAME, AUDIO_FILENAME)
             normalize_audio(AUDIO_FILENAME)
             send_to_backend(AUDIO_FILENAME)
 
